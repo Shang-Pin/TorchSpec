@@ -1,0 +1,71 @@
+# MiniMax-M2.5 Eagle3 training — single-node 8-GPU setup
+#
+# GPU allocation (8 GPUs on 1 node):
+#   - 4 GPUs for inference (1 engine x TP=4)
+#   - 4 GPUs for training (FSDP across 4 GPUs)
+#
+# Usage:
+#   python -m torchspec.train_entry --config configs/sglang_minimax_m25_1node.yaml
+
+model:
+  target_model_path: MiniMaxAI/MiniMax-M2.5
+  trust_remote_code: true
+
+dataset:
+  train_data_path: ../examples/data/sample_conversations.jsonl
+  eval_data_path: ../examples/data/eval_conversations.jsonl
+  chat_template: minimax-m2
+  prompt_key: conversations
+  defer_tokenization: true
+  eval_interval: 50
+
+training:
+  max_seq_length: 16384
+  seed: 42
+  micro_batch_size: 1
+  num_epochs: 1
+  num_train_steps: 100
+  learning_rate: 5e-5
+  warmup_ratio: 0.015
+  max_grad_norm: 1
+  ttt_length: 4
+  draft_accumulation_steps: 1
+  training_num_nodes: 1
+  training_num_gpus_per_node: 4
+  attention_backend: flex_attention
+  max_concurrent_batches: 1
+  gradient_checkpointing: true
+  save_per_epoch: true
+
+inference:
+  inference_engine_type: sgl
+  inference_num_gpus: 4
+  inference_num_gpus_per_engine: 4
+  inference_num_gpus_per_node: 8
+  max_sample_pool_size: 32
+  inference_buffer_threshold: 8
+  inference_fetch_batch: 8
+  inference_batch_size: 2
+  sglang:
+    tp_size: 4
+    mem_fraction_static: 0.6
+    init_timeout: 600
+    extra_args:
+      disable_flashinfer_autotune: true
+
+mooncake:
+  master_server_address: null
+  metadata_server: null
+  hidden_dim: 3072
+  global_segment_size: 16GB
+  local_buffer_size: 4GB
+  protocol: tcp
+
+output_dir: ./outputs/minimax_m25_1node
+cache_dir: ./cache/minimax_m25_1node
+model_download_dir: null
+
+debug:
+  save_debug_train_data: null
+  debug_train_only: false
+  debug_inference_only: false
